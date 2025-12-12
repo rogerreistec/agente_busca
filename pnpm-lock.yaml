@@ -1,0 +1,12 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+overrides:
+  string-width: 4.2.3
+
+importers:
+
+  .: {}
