@@ -1,0 +1,15 @@
+services:
+  db:
+    image: postgres:16
+    container_name: agente_busca_db
+    ports:
+      - "5433:5432"   # ← porta externa 5433
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agente_busca
+    volumes:
+      - agente_busca_pg:/var/lib/postgresql/data
+
+volumes:
+  agente_busca_pg:

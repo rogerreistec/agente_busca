@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# PNPM
+pnpm-lock.yaml
+**/pnpm-lock.yaml
+.pnpm-store/
+
+# Environment
+.env
+.env.*
+apps/api/.env
+apps/api/.env.*
+
+# Build
+dist/
+build/
+
+# Logs
+npm-debug.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+
