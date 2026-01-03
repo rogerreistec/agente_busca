@@ -1,8 +1,9 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import prisma from '#services/prisma'
+import { ok, fail } from '#services/http_response'
 
 export default class CategoriesController {
-  async index({ request }: HttpContext) {
+  async index({ request, response }: HttpContext) {
     const page = Number(request.input('page', 1))
     const perPage = Number(request.input('perPage', 20))
 
@@ -15,28 +16,43 @@ export default class CategoriesController {
       prisma.category.count(),
     ])
 
-    return {
+    const lastPage = total === 0 ? 0 : Math.ceil(total / perPage)
+
+    return ok(response, {
+      message: 'Categorias listadas com sucesso',
       data: items,
-      meta: { page, perPage, total, lastPage: Math.ceil(total / perPage) },
-    }
+      meta: { page, perPage, total, lastPage },
+    })
   }
 
   async store({ request, response }: HttpContext) {
     const name = String(request.input('name', '')).trim()
 
     if (!name) {
-      return response.badRequest({ message: 'name é obrigatório' })
+      return fail(response, {
+        status: 400,
+        message: 'Validação falhou',
+        errors: { name: ['name é obrigatório'] },
+      })
     }
 
     const exists = await prisma.category.findUnique({ where: { name } })
     if (exists) {
-      return response.conflict({ message: 'Categoria já existe' })
+      return fail(response, {
+        status: 409,
+        message: 'Categoria já existe',
+        errors: { name: ['Categoria já cadastrada'] },
+      })
     }
 
     const category = await prisma.category.create({
       data: { name },
     })
 
-    return response.created(category)
+    return ok(response, {
+      status: 201,
+      message: 'Categoria criada com sucesso',
+      data: category,
+    })
   }
 }
