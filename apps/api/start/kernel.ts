@@ -1,26 +1,14 @@
-/*
-|--------------------------------------------------------------------------
-| HTTP kernel file
-|--------------------------------------------------------------------------
-|
-| The HTTP kernel file is used to register the middleware with the server
-| or the router.
-|
-*/
-
+// start/kernel.ts
 import router from '@adonisjs/core/services/router'
 import server from '@adonisjs/core/services/server'
 
 /**
- * The error handler is used to convert an exception
- * to an HTTP response.
+ * Error handler
  */
 server.errorHandler(() => import('#exceptions/handler'))
 
 /**
- * The server middleware stack runs middleware on all the HTTP
- * requests, even if there is no route registered for
- * the request URL.
+ * Global server middleware
  */
 server.use([
   () => import('#middleware/container_bindings_middleware'),
@@ -29,13 +17,14 @@ server.use([
 ])
 
 /**
- * The router middleware stack runs middleware on all the HTTP
- * requests with a registered route.
+ * Router middleware (bodyparser)
  */
 router.use([() => import('@adonisjs/core/bodyparser_middleware')])
 
 /**
- * Named middleware collection must be explicitly assigned to
- * the routes or the routes group.
+ * ✅ Named middleware (EXPORTADO)
+ * Use no routes como: .use(middleware.auth())
  */
-export const middleware = router.named({})
+export const middleware = router.named({
+  auth: () => import('#middleware/auth_middleware'),
+})

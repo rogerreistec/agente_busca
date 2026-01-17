@@ -14,7 +14,7 @@
   "#validators/*": "./app/validators/*.js",
   "#exceptions/*": "./app/exceptions/*.js"
   },  "scripts": {
-    "dev": "node ace serve --hmr",
+    "dev": "node ace serve --watch",
     "build": "node ace build",
     "start": "node ./build/server.js",
     "lint": "eslint .",

@@ -8,20 +8,42 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
+  id           String      @id @default(cuid())
   name         String
-  email        String   @unique
+  email        String      @unique
   passwordHash String
+  
+  // Relacionamentos
+  tokens       UserToken[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
+model UserToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      String    @default("auth") // "auth", "password_reset", etc
+  hash      String    @unique
+  expiresAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  // Índice composto para buscas rápidas de validação
+  @@index([hash, type]) 
+}
 
 model Category {
   id        String   @id @default(cuid())
   name      String   @unique
+  slug      String   @unique // Adicionado para URLs amigáveis
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-}
 
+  @@index([slug])
+}

@@ -1,7 +1,12 @@
+// start/routes.ts
 import router from '@adonisjs/core/services/router'
+
 import CategoriesController from '#controllers/categories_controller'
 import UsersController from '#controllers/users_controller'
+import AuthController from '#controllers/auth_controller'
+
 import { ok } from '#services/http_response'
+import { middleware } from '#start/kernel' // ✅ IMPORTANTE
 
 router.get('/', async ({ response }) => {
   return ok(response, { message: 'Agente Busca API', data: { ok: true } })
@@ -12,6 +17,13 @@ router.get('/categories', [CategoriesController, 'index'])
 router.post('/categories', [CategoriesController, 'store'])
 
 // Users
+router.post('/users', [UsersController, 'store'])
 router.get('/users', [UsersController, 'index'])
 router.get('/users/:id', [UsersController, 'show'])
-router.post('/users', [UsersController, 'store'])
+
+// Auth
+router.post('/auth/register', [AuthController, 'register'])
+router.post('/auth/login', [AuthController, 'login'])
+
+// ✅ AQUI ESTÁ A CORREÇÃO DEFINITIVA
+router.post('/auth/logout', [AuthController, 'logout']).use(middleware.auth())
