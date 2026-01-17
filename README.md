@@ -4,226 +4,203 @@
 
 # 🧑‍🔧 Agente Busca — Super App de Serviços
 
-O **Agente Busca** é um super aplicativo projetado para conectar **clientes** a **prestadores de serviço** de forma rápida, inteligente e intuitiva.  
-A plataforma permite criar pedidos, receber orçamentos gratuitos, comparar propostas, acompanhar o serviço e avaliar o profissional — tudo dentro do app.
+O **Agente Busca** é um super aplicativo criado para conectar **clientes** a **prestadores de serviço** de forma rápida, inteligente e organizada.
 
-Inspirado em modelos como **OLX**, **GetNinjas** e **Uber**, o Agente Busca traz:
+A plataforma permite que o usuário:
+- Crie pedidos de serviço
+- Receba orçamentos gratuitos
+- Compare propostas
+- Acompanhe o andamento
+- Avalie o profissional
 
-- fluxo completo de orçamento → proposta → execução → finalização  
-- ranking de prestadores baseado em desempenho  
-- categorias organizadas  
-- experiência simples e visual  
+Inspirado em plataformas como **OLX**, **GetNinjas** e **Uber**, o Agente Busca unifica tudo em uma única experiência moderna.
 
 ---
 
 ## 🚀 Status do Projeto
 
-**Sprint Atual:** _Preparação do backend (Prisma + Auth + Categorias)_  
-**Progresso:** Ambiente configurado · GitHub OK · Monorepo ativo · Copilot integrado
+**Sprint atual:** Backend Base  
+**Status:** 🟢 Em desenvolvimento ativo
+
+✔ Ambiente configurado  
+✔ Monorepo funcionando  
+✔ Autenticação com tokens  
+✔ Prisma configurado  
+✔ API rodando corretamente  
 
 ---
 
 ## ✨ Funcionalidades do MVP
 
 ### 👤 Cliente
-
-- Cadastro e login  
-- Criar pedidos com descrição e fotos  
-- Receber **pré-orçamentos gratuitos**  
-- Receber propostas detalhadas dos prestadores  
-- Acompanhar o andamento do serviço  
-- Avaliar prestador e serviço  
+- Cadastro e login
+- Criar pedidos com descrição
+- Receber pré-orçamentos
+- Receber propostas
+- Acompanhar serviços
+- Avaliar prestadores
 
 ### 👨‍🔧 Prestador
-
-- Cadastro com categorias e raio de atendimento  
-- Receber pedidos compatíveis  
-- Enviar pré-orçamento estilo "Tinder" (aceitar / pular)  
-- Enviar propostas completas  
-- Receber avaliações e subir no ranking  
+- Cadastro por categoria
+- Receber pedidos compatíveis
+- Enviar pré-orçamentos
+- Enviar propostas completas
+- Receber avaliações
+- Subir no ranking
 
 ### 🧠 Sistema
+- Autenticação com token
+- Middleware de proteção
+- Ranking por desempenho
+- Categorias organizadas
+- Fluxo completo de serviço:
+requested → matched → scheduled → in_progress → delivered → completed
 
-- Ranking de prestadores por desempenho  
-- Categorias estilo OLX  
-- Fluxo completo:  
-  `requested → matched → scheduled → in_progress → delivered → completed`  
-- Chat simples entre cliente e prestador (MVP)  
-- Histórico de serviços  
-- Autenticação moderna com tokens  
+markdown
+Copiar código
+- Chat básico (MVP)
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 
-### **Backend**
+### 🔧 Backend
+- **AdonisJS 6**
+- **Prisma ORM**
+- **PostgreSQL**
+- **Autenticação com Token**
+- **Validações**
+- **MVC + Services**
 
-- **AdonisJS 6**  
-- **Prisma ORM** (em implementação)  
-- **PostgreSQL**  
-- Autenticação com API Tokens  
-- Validação (ex.: Zod)  
-- MVC + Services  
+### 🌐 Frontend (Planejado)
+- **Next.js 15**
+- **TailwindCSS**
+- **TanStack Query**
+- **shadcn/ui**
 
-### **Frontend Web (planejado)**
+### 📱 Mobile (Futuro)
+- **Expo**
+- **React Native**
+- **Expo Router**
 
-- **Next.js 15**  
-- TailwindCSS  
-- TanStack Query  
-- shadcn/UI  
-
-### **Mobile (futuro MVP)**
-
-- Expo / React Native  
-- Expo Router  
-- TanStack Query  
-
-### **Infra & DevOps**
-
-- Turborepo (monorepo)  
-- pnpm  
-- Docker (PostgreSQL e serviços)  
-- GitHub Actions  
-- SSH Keys + Versionamento  
+### ⚙ Infra & DevOps
+- **Turborepo**
+- **pnpm**
+- **Docker**
+- **GitHub Actions**
+- **PostgreSQL**
+- **SSH + GitHub**
 
 ---
 
-## 🧱 Arquitetura do Projeto (planejada)
+## 🧱 Estrutura do Projeto
 
-```text
 agente-busca/
 ├── apps/
-│   ├── api/        → Backend AdonisJS (já existe)
-│   └── web/        → Frontend Next.js (planejado)
+│ ├── api/ # Backend AdonisJS
+│ └── web/ # Frontend Next.js (futuro)
 ├── packages/
-│   ├── ui/         → Componentes compartilhados (planejado)
-│   ├── types/      → Tipos compartilhados (planejado)
-│   └── config/     → ESLint, Tailwind, TS configs (planejado)
+│ ├── ui/ # Componentes compartilhados
+│ ├── types/ # Tipagens globais
+│ └── config/ # Configurações comuns
 ├── infra/
-│   └── docker/     → Banco, Redis etc. (planejado)
+│ └── docker/ # Banco e serviços
 ├── assets/
-│   └── logo-agente-busca.png
-├── turbo.json      → Config do Turborepo (se aplicável)
+│ └── logo-agente-busca.png
+├── turbo.json
 ├── pnpm-workspace.yaml
 ├── package.json
 └── README.md
-Algumas pastas ainda serão criadas ao longo das sprints (packages, web, infra).
 
-📅 Roadmap Oficial (Sprints)
-✅ Sprint 0 — Ambiente & Setup (CONCLUÍDA)
-Ambiente Linux + VSCode
-
-Git + SSH + GitHub
-
-Repositório agente_busca criado
-
-Estrutura base com apps/
-
-AdonisJS API criada e rodando
-
-🟠 Sprint 1 — Backend Base (ATUAL)
-PostgreSQL + Prisma configurados
-
-Schema inicial: User e Category
-
-Migrations rodando
-
-Auth (registro + login com tokens)
-
-Seeds de categorias base
-
-🔜 Sprint 2 — Pedidos
-Criar pedidos
-
-Upload de imagens
-
-Listagens do cliente
-
-Filtros básicos
-
-🔜 Sprint 3 — Prestadores & Pré-Orçamentos
-Onboarding do prestador
-
-Cadastro de categorias
-
-Pré-orçamento estilo "Tinder"
-
-🔜 Sprint 4 — Propostas & Jobs
-Proposta completa
-
-Workflow de job
-
-Histórico
-
-🔜 Sprint 5 — Chat & Acompanhamento
-Chat básico
-
-Notificações locais (MVP)
-
-🔜 Sprint 6 — Avaliações & Ranking
-Sistema de avaliação
-
-Ranking global
-
-Ordenação por score
-
-🔜 Sprint 7 — Deploy
-API na Railway/Fly.io
-
-Web na Vercel
-
-Banco na Neon
-
-Variáveis de ambiente
-
-Testes finais
-
-▶️ Como Rodar Localmente
-1️⃣ Instalar dependências
-Na raiz do projeto:
-
-bash
+markdown
 Copiar código
+
+---
+
+## 📅 Roadmap Oficial
+
+### ✅ Sprint 0 — Setup
+- Ambiente Linux
+- Git + GitHub
+- Monorepo
+- API Adonis criada
+
+### 🟠 Sprint 1 — Backend Base (ATUAL)
+- Prisma + PostgreSQL
+- Auth (login / logout)
+- Middleware de autenticação
+- Categorias
+- Tokens funcionando
+
+### 🔜 Sprint 2 — Pedidos
+- Criar pedidos
+- Upload de imagens
+- Listagens
+
+### 🔜 Sprint 3 — Prestadores
+- Cadastro
+- Pré-orçamento
+- Matching
+
+### 🔜 Sprint 4 — Propostas
+- Proposta completa
+- Fluxo de job
+
+### 🔜 Sprint 5 — Chat
+- Chat básico
+- Notificações
+
+### 🔜 Sprint 6 — Avaliação & Ranking
+- Sistema de avaliação
+- Ranking global
+
+### 🔜 Sprint 7 — Deploy
+- API (Railway / Fly.io)
+- Web (Vercel)
+- Banco (Neon)
+- CI/CD
+
+---
+
+## ▶️ Como Rodar Localmente
+
+### 1️⃣ Instalar dependências
+```bash
 pnpm install
 2️⃣ Rodar a API
 bash
 Copiar código
 cd apps/api
 pnpm dev
-API disponível (padrão AdonisJS):
+A API ficará disponível em:
 
-text
+arduino
 Copiar código
 http://localhost:3333
-3️⃣ (Opcional) Rodar o Frontend Web
-Apenas quando o apps/web estiver criado.
-
-bash
-Copiar código
-cd apps/web
-pnpm dev
-4️⃣ Configurar Banco de Dados (PostgreSQL + Prisma)
-Na pasta apps/api, crie o arquivo .env:
+3️⃣ Configurar Banco de Dados
+Crie o arquivo .env em apps/api:
 
 env
 Copiar código
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/agente_busca"
-Depois, rode as migrações (quando o Prisma estiver configurado):
+Rodar migrações:
 
 bash
 Copiar código
-cd apps/api
-pnpm prisma:migrate
-🤝 Contribuindo
-Faça um fork do repositório
+pnpm prisma migrate dev
+🤝 Contribuição
+Fork o projeto
 
-Crie uma branch: feature/minha-ideia
+Crie uma branch:
 
-Faça seus commits
+bash
+Copiar código
+git checkout -b feature/minha-feature
+Commit suas alterações
 
-Abra um Pull Request
+Envie um Pull Request
 
 📜 Licença
-Licença MIT — livre para uso e modificação.
+MIT License — livre para uso e modificação.
 
 <p align="center"> Desenvolvido com ❤️ por <strong>Roger Reis</strong> </p> ```
