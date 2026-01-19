@@ -12,9 +12,10 @@ model User {
   name         String
   email        String      @unique
   passwordHash String
-  
+
   // Relacionamentos
   tokens       UserToken[]
+  requests     Request[]   // ✅ pedidos do usuário (cliente)
 
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -33,17 +34,53 @@ model UserToken {
   updatedAt DateTime  @updatedAt
 
   @@index([userId])
-  // Índice composto para buscas rápidas de validação
-  @@index([hash, type]) 
+  @@index([hash, type])
 }
 
 model Category {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  slug      String   @unique // Adicionado para URLs amigáveis
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+
+  // Relacionamentos
+  requests  Request[] // ✅ pedidos desta categoria
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([slug])
+}
+
+enum RequestStatus {
+  requested
+  matched
+  scheduled
+  in_progress
+  delivered
+  completed
+  canceled
+}
+
+model Request {
+  id          String        @id @default(cuid())
+
+  // Dono do pedido (cliente)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Categoria (OLX-style)
+  categoryId  String
+  category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  title       String
+  description String
+
+  status      RequestStatus @default(requested)
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([categoryId])
+  @@index([status])
 }
