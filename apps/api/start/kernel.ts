@@ -1,4 +1,3 @@
-// start/kernel.ts
 import router from '@adonisjs/core/services/router'
 import server from '@adonisjs/core/services/server'
 
@@ -22,8 +21,8 @@ server.use([
 router.use([() => import('@adonisjs/core/bodyparser_middleware')])
 
 /**
- * ✅ Named middleware (EXPORTADO)
- * Use no routes como: .use(middleware.auth())
+ * Named middleware
+ * (para usar middleware.auth() nas rotas)
  */
 export const middleware = router.named({
   auth: () => import('#middleware/auth_middleware'),

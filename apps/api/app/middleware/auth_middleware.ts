@@ -1,4 +1,3 @@
-// app/middleware/auth_middleware.ts
 import type { HttpContext } from '@adonisjs/core/http'
 import prisma from '#services/prisma'
 import { fail } from '#services/http_response'
@@ -10,7 +9,7 @@ function tokenHash(token: string) {
 
 export default class AuthMiddleware {
   async handle({ request, response }: HttpContext, next: () => Promise<void>) {
-    const authHeader = request.header('authorization') ?? ''
+    const authHeader = request.header('authorization') || ''
     const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : ''
 
     if (!token) {
@@ -34,6 +33,6 @@ export default class AuthMiddleware {
 
     ;(request as any).user = tokenRow.user
 
-    return next()
+    await next()
   }
 }
