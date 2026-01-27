@@ -1,0 +1,437 @@
+[1mdiff --git a/apps/api/app/controllers/requests_controller.ts b/apps/api/app/controllers/requests_controller.ts[m
+[1mindex e88c4b6b..5efaefcd 100644[m
+[1m--- a/apps/api/app/controllers/requests_controller.ts[m
+[1m+++ b/apps/api/app/controllers/requests_controller.ts[m
+[36m@@ -1,43 +1,54 @@[m
+[32m+[m[32m// ============================================[m
+[32m+[m[32m// FILE: app/controllers/requests_controller.ts[m
+[32m+[m[32m// ============================================[m
+ import type { HttpContext } from '@adonisjs/core/http'[m
+ import prisma from '#services/prisma'[m
+ import { ok, fail } from '#services/http_response'[m
+ [m
+[32m+[m[32mconst ALLOWED_STATUS = [[m
+[32m+[m[32m  'requested',[m
+[32m+[m[32m  'matched',[m
+[32m+[m[32m  'scheduled',[m
+[32m+[m[32m  'in_progress',[m
+[32m+[m[32m  'delivered',[m
+[32m+[m[32m  'completed',[m
+[32m+[m[32m  'canceled',[m
+[32m+[m[32m] as const[m
+[32m+[m
+[32m+[m[32mtype AllowedStatus = (typeof ALLOWED_STATUS)[number][m
+[32m+[m
+[32m+[m[32mfunction isAllowedStatus(value: unknown): value is AllowedStatus {[m
+[32m+[m[32m  return typeof value === 'string' && (ALLOWED_STATUS as readonly string[]).includes(value)[m
+[32m+[m[32m}[m
+[32m+[m
+ export default class RequestsController {[m
+   /**[m
+    * POST /requests[m
+[31m-   * Cria um pedido (cliente logado)[m
+[32m+[m[32m   * Cria um pedido (sempre para o usuário autenticado)[m
+    */[m
+   async store({ request, response }: HttpContext) {[m
+     const user = (request as any).user[m
+     if (!user) {[m
+[31m-      return fail(response, { status: 401, message: 'Não autenticado', errors: null })[m
+[32m+[m[32m      return fail(response, { status: 401, message: 'Usuário não autenticado' })[m
+     }[m
+ [m
+     const title = String(request.input('title', '')).trim()[m
+     const description = String(request.input('description', '')).trim()[m
+     const categoryId = String(request.input('categoryId', '')).trim()[m
+ [m
+[31m-    const errors: Record<string, string[]> = {}[m
+[31m-    if (!title) errors.title = ['title é obrigatório'][m
+[31m-    if (!description) errors.description = ['description é obrigatório'][m
+[31m-    if (!categoryId) errors.categoryId = ['categoryId é obrigatório'][m
+[31m-[m
+[31m-    if (Object.keys(errors).length) {[m
+[31m-      return fail(response, { status: 400, message: 'Validação falhou', errors })[m
+[32m+[m[32m    if (!title || title.length < 3) {[m
+[32m+[m[32m      return fail(response, { status: 400, message: 'Título é obrigatório (min 3 caracteres)' })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if (!description || description.length < 10) {[m
+[32m+[m[32m      return fail(response, { status: 400, message: 'Descrição é obrigatória (min 10 caracteres)' })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if (!categoryId) {[m
+[32m+[m[32m      return fail(response, { status: 400, message: 'categoryId é obrigatório' })[m
+     }[m
+ [m
+[31m-    // Verifica se a categoria existe (evita FK error feio)[m
+[31m-    const category = await prisma.category.findUnique({[m
+[31m-      where: { id: categoryId },[m
+[31m-      select: { id: true, name: true, slug: true },[m
+[31m-    })[m
+[31m-[m
+[32m+[m[32m    const category = await prisma.category.findUnique({ where: { id: categoryId } })[m
+     if (!category) {[m
+[31m-      return fail(response, {[m
+[31m-        status: 404,[m
+[31m-        message: 'Categoria não encontrada',[m
+[31m-        errors: { categoryId: ['categoryId inválido'] },[m
+[31m-      })[m
+[32m+[m[32m      return fail(response, { status: 404, message: 'Categoria não encontrada' })[m
+     }[m
+ [m
+     const created = await prisma.request.create({[m
+[36m@@ -46,7 +57,6 @@[m [mexport default class RequestsController {[m
+         categoryId,[m
+         title,[m
+         description,[m
+[31m-        // status default: requested[m
+       },[m
+       select: {[m
+         id: true,[m
+[36m@@ -63,72 +73,163 @@[m [mexport default class RequestsController {[m
+ [m
+   /**[m
+    * GET /requests/my[m
+[31m-   * Lista pedidos do usuário logado[m
+[32m+[m[32m   * Lista pedidos do usuário logado com filtros:[m
+[32m+[m[32m   * - status=requested|matched|...[m
+[32m+[m[32m   * - category=slug (ex: eletronicos)[m
+[32m+[m[32m   * - categoryId=cuid[m
+[32m+[m[32m   * - order=desc|asc (default desc)[m
+[32m+[m[32m   * - page=1..n, perPage=1..100[m
+    */[m
+   async my({ request, response }: HttpContext) {[m
+     const user = (request as any).user[m
+     if (!user) {[m
+[31m-      return fail(response, { status: 401, message: 'Não autenticado', errors: null })[m
+[32m+[m[32m      return fail(response, { status: 401, message: 'Usuário não autenticado' })[m
+     }[m
+ [m
+[31m-    const status = String(request.input('status', '')).trim() // opcional[m
+[32m+[m[32m    const statusQuery = request.input('status')[m
+[32m+[m[32m    const categorySlug = String(request.input('category', '')).trim()[m
+[32m+[m[32m    const categoryIdQuery = String(request.input('categoryId', '')).trim()[m
+[32m+[m
+[32m+[m[32m    const order = String(request.input('order', 'desc')).toLowerCase()[m
+[32m+[m[32m    const page = Math.max(1, Number(request.input('page', 1)) || 1)[m
+[32m+[m[32m    const perPageRaw = Number(request.input('perPage', 20)) || 20[m
+[32m+[m[32m    const perPage = Math.min(100, Math.max(1, perPageRaw))[m
+ [m
+[32m+[m[32m    // monta filtro base (sempre do usuário)[m
+     const where: any = { userId: user.id }[m
+[31m-    if (status) where.status = status[m
+ [m
+[31m-    const list = await prisma.request.findMany({[m
+[31m-      where,[m
+[31m-      orderBy: { createdAt: 'desc' },[m
+[31m-      select: {[m
+[31m-        id: true,[m
+[31m-        title: true,[m
+[31m-        status: true,[m
+[31m-        createdAt: true,[m
+[31m-        category: { select: { id: true, name: true, slug: true } },[m
+[31m-      },[m
+[31m-    })[m
+[32m+[m[32m    // filtro status (opcional)[m
+[32m+[m[32m    if (statusQuery !== undefined && statusQuery !== null && statusQuery !== '') {[m
+[32m+[m[32m      if (!isAllowedStatus(statusQuery)) {[m
+[32m+[m[32m        return fail(response, {[m
+[32m+[m[32m          status: 400,[m
+[32m+[m[32m          message: `Status inválido. Use: ${ALLOWED_STATUS.join(', ')}`,[m
+[32m+[m[32m        })[m
+[32m+[m[32m      }[m
+[32m+[m[32m      where.status = statusQuery[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // filtro categoria por id (opcional)[m
+[32m+[m[32m    if (categoryIdQuery) {[m
+[32m+[m[32m      where.categoryId = categoryIdQuery[m
+[32m+[m[32m    }[m
+ [m
+[31m-    return ok(response, { message: 'Meus pedidos', data: list })[m
+[32m+[m[32m    // filtro categoria por slug (opcional)[m
+[32m+[m[32m    if (categorySlug) {[m
+[32m+[m[32m      const category = await prisma.category.findUnique({ where: { slug: categorySlug } })[m
+[32m+[m[32m      if (!category) {[m
+[32m+[m[32m        return fail(response, { status: 404, message: 'Categoria (slug) não encontrada' })[m
+[32m+[m[32m      }[m
+[32m+[m[32m      where.categoryId = category.id[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const orderBy = { createdAt: order === 'asc' ? 'asc' : 'desc' }[m
+[32m+[m
+[32m+[m[32m    const [total, items] = await Promise.all([[m
+[32m+[m[32m      prisma.request.count({ where }),[m
+[32m+[m[32m      prisma.request.findMany({[m
+[32m+[m[32m        where,[m
+[32m+[m[32m        orderBy,[m
+[32m+[m[32m        skip: (page - 1) * perPage,[m
+[32m+[m[32m        take: perPage,[m
+[32m+[m[32m        select: {[m
+[32m+[m[32m          id: true,[m
+[32m+[m[32m          title: true,[m
+[32m+[m[32m          status: true,[m
+[32m+[m[32m          createdAt: true,[m
+[32m+[m[32m          category: { select: { id: true, name: true, slug: true } },[m
+[32m+[m[32m        },[m
+[32m+[m[32m      }),[m
+[32m+[m[32m    ])[m
+[32m+[m
+[32m+[m[32m    const lastPage = Math.ceil(total / perPage)[m
+[32m+[m
+[32m+[m[32m    return ok(response, {[m
+[32m+[m[32m      message: 'Pedidos listados com sucesso',[m
+[32m+[m[32m      data: items,[m
+[32m+[m[32m      meta: { page, perPage, total, lastPage },[m
+[32m+[m[32m    })[m
+   }[m
+ [m
+   /**[m
+    * GET /requests/:id[m
+[31m-   * Detalhe do pedido (somente dono)[m
+[32m+[m[32m   * Mostra um pedido por id (apenas se for do usuário logado)[m
+    */[m
+   async show({ request, response, params }: HttpContext) {[m
+     const user = (request as any).user[m
+     if (!user) {[m
+[31m-      return fail(response, { status: 401, message: 'Não autenticado', errors: null })[m
+[32m+[m[32m      return fail(response, { status: 401, message: 'Usuário não autenticado' })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const id = String(params.id || '').trim()[m
+[32m+[m[32m    if (!id) {[m
+[32m+[m[32m      return fail(response, { status: 400, message: 'ID inválido' })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const found = await prisma.request.findUnique({[m
+[32m+[m[32m      where: { id },[m
+[32m+[m[32m      include: { category: { select: { id: true, name: true, slug: true } } },[m
+[32m+[m[32m    })[m
+[32m+[m
+[32m+[m[32m    if (!found) {[m
+[32m+[m[32m      return fail(response, { status: 404, message: 'Pedido não encontrado' })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    // Segurança: só dono vê[m
+[32m+[m[32m    if (found.userId !== user.id) {[m
+[32m+[m[32m      return fail(response, { status: 403, message: 'Você não tem acesso a este pedido' })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    return ok(response, { message: 'Pedido encontrado', data: found })[m
+[32m+[m[32m  }[m
+[32m+[m
+[32m+[m[32m  /**[m
+[32m+[m[32m   * PATCH /requests/:id/status[m
+[32m+[m[32m   * Atualiza apenas o status (somente dono)[m
+[32m+[m[32m   */[m
+[32m+[m[32m  async updateStatus({ request, response, params }: HttpContext) {[m
+[32m+[m[32m    const user = (request as any).user[m
+[32m+[m[32m    if (!user) {[m
+[32m+[m[32m      return fail(response, { status: 401, message: 'Usuário não autenticado' })[m
+     }[m
+ [m
+     const id = String(params.id || '').trim()[m
+[32m+[m[32m    const status = request.input('status')[m
+[32m+[m
+     if (!id) {[m
+[31m-      return fail(response, { status: 400, message: 'id inválido', errors: null })[m
+[32m+[m[32m      return fail(response, { status: 400, message: 'ID inválido' })[m
+[32m+[m[32m    }[m
+[32m+[m[32m    if (!isAllowedStatus(status)) {[m
+[32m+[m[32m      return fail(response, {[m
+[32m+[m[32m        status: 400,[m
+[32m+[m[32m        message: `Status inválido. Use: ${ALLOWED_STATUS.join(', ')}`,[m
+[32m+[m[32m      })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    const found = await prisma.request.findUnique({ where: { id } })[m
+[32m+[m[32m    if (!found) {[m
+[32m+[m[32m      return fail(response, { status: 404, message: 'Pedido não encontrado' })[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    if (found.userId !== user.id) {[m
+[32m+[m[32m      return fail(response, { status: 403, message: 'Você não pode atualizar este pedido' })[m
+     }[m
+ [m
+[31m-    const item = await prisma.request.findUnique({[m
+[32m+[m[32m    const updated = await prisma.request.update({[m
+       where: { id },[m
+[32m+[m[32m      data: { status },[m
+       select: {[m
+         id: true,[m
+         title: true,[m
+         description: true,[m
+         status: true,[m
+[31m-        createdAt: true,[m
+         updatedAt: true,[m
+[31m-        userId: true,[m
+         category: { select: { id: true, name: true, slug: true } },[m
+       },[m
+     })[m
+ [m
+[31m-    if (!item) {[m
+[31m-      return fail(response, { status: 404, message: 'Pedido não encontrado', errors: null })[m
+[31m-    }[m
+[31m-[m
+[31m-    // Segurança: só o dono pode ver[m
+[31m-    if (item.userId !== user.id) {[m
+[31m-      return fail(response, { status: 403, message: 'Acesso negado', errors: null })[m
+[31m-    }[m
+[31m-[m
+[31m-    return ok(response, { message: 'Detalhe do pedido', data: item })[m
+[32m+[m[32m    return ok(response, { message: 'Status atualizado com sucesso', data: updated })[m
+   }[m
+ }[m
+[41m+[m
+[41m+[m
+[1mdiff --git a/apps/api/prisma/schema.prisma b/apps/api/prisma/schema.prisma[m
+[1mindex 72aec5a1..1a41df5c 100644[m
+[1m--- a/apps/api/prisma/schema.prisma[m
+[1m+++ b/apps/api/prisma/schema.prisma[m
+[36m@@ -13,9 +13,11 @@[m [mmodel User {[m
+   email        String      @unique[m
+   passwordHash String[m
+ [m
+[31m-  // Relacionamentos[m
+   tokens       UserToken[][m
+[31m-  requests     Request[]   // ✅ pedidos do usuário (cliente)[m
+[32m+[m[32m  requests     Request[][m
+[32m+[m
+[32m+[m[32m  // ✅ novo: 1 usuário pode (ou não) ser prestador[m
+[32m+[m[32m  provider     Provider?[m
+ [m
+   createdAt    DateTime    @default(now())[m
+   updatedAt    DateTime    @updatedAt[m
+[36m@@ -26,7 +28,7 @@[m [mmodel UserToken {[m
+   userId    String[m
+   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)[m
+ [m
+[31m-  type      String    @default("auth") // "auth", "password_reset", etc[m
+[32m+[m[32m  type      String    @default("auth")[m
+   hash      String    @unique[m
+   expiresAt DateTime?[m
+ [m
+[36m@@ -42,8 +44,7 @@[m [mmodel Category {[m
+   name      String    @unique[m
+   slug      String    @unique[m
+ [m
+[31m-  // Relacionamentos[m
+[31m-  requests  Request[] // ✅ pedidos desta categoria[m
+[32m+[m[32m  requests  Request[][m
+ [m
+   createdAt DateTime  @default(now())[m
+   updatedAt DateTime  @updatedAt[m
+[36m@@ -64,11 +65,9 @@[m [menum RequestStatus {[m
+ model Request {[m
+   id          String        @id @default(cuid())[m
+ [m
+[31m-  // Dono do pedido (cliente)[m
+   userId      String[m
+   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)[m
+ [m
+[31m-  // Categoria (OLX-style)[m
+   categoryId  String[m
+   category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)[m
+ [m
+[36m@@ -77,6 +76,9 @@[m [mmodel Request {[m
+ [m
+   status      RequestStatus @default(requested)[m
+ [m
+[32m+[m[32m  // ✅ novo: um pedido pode ter várias propostas[m
+[32m+[m[32m  proposals   Proposal[][m
+[32m+[m
+   createdAt   DateTime      @default(now())[m
+   updatedAt   DateTime      @updatedAt[m
+ [m
+[36m@@ -84,3 +86,62 @@[m [mmodel Request {[m
+   @@index([categoryId])[m
+   @@index([status])[m
+ }[m
+[32m+[m
+[32m+[m[32m//[m
+[32m+[m[32m// ============================[m
+[32m+[m[32m// ✅ NOVO: Prestadores[m
+[32m+[m[32m// ============================[m
+[32m+[m[32m//[m
+[32m+[m
+[32m+[m[32mmodel Provider {[m
+[32m+[m[32m  id          String    @id @default(cuid())[m
+[32m+[m
+[32m+[m[32m  // 1 provider por usuário (trava forte)[m
+[32m+[m[32m  userId      String    @unique[m
+[32m+[m[32m  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)[m
+[32m+[m
+[32m+[m[32m  // dados básicos do prestador (MVP)[m
+[32m+[m[32m  description String?[m
+[32m+[m[32m  rating      Float     @default(5)[m
+[32m+[m[32m  isActive    Boolean   @default(true)[m
+[32m+[m
+[32m+[m[32m  // um prestador pode enviar várias propostas[m
+[32m+[m[32m  proposals   Proposal[][m
+[32m+[m
+[32m+[m[32m  createdAt   DateTime  @default(now())[m
+[32m+[m[32m  updatedAt   DateTime  @updatedAt[m
+[32m+[m
+[32m+[m[32m  @@index([isActive])[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32menum ProposalStatus {[m
+[32m+[m[32m  sent[m
+[32m+[m[32m  accepted[m
+[32m+[m[32m  rejected[m
+[32m+[m[32m  canceled[m
+[32m+[m[32m}[m
+[32m+[m
+[32m+[m[32mmodel Proposal {[m
+[32m+[m[32m  id         String         @id @default(cuid())[m
+[32m+[m
+[32m+[m[32m  requestId  String[m
+[32m+[m[32m  request    Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)[m
+[32m+[m
+[32m+[m[32m  providerId String[m
+[32m+[m[32m  provider   Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)[m
+[32m+[m
+[32m+[m[32m  // preço e mensagem[m
+[32m+[m[32m  price      Decimal?       @db.Decimal(10, 2)[m
+[32m+[m[32m  message    String[m
+[32m+[m[32m  status     ProposalStatus @default(sent)[m
+[32m+[m
+[32m+[m[32m  createdAt  DateTime       @default(now())[m
+[32m+[m[32m  updatedAt  DateTime       @updatedAt[m
+[32m+[m
+[32m+[m[32m  // ✅ trava: mesmo prestador não manda 2 propostas pro mesmo pedido[m
+[32m+[m[32m  @@unique([requestId, providerId])[m
+[32m+[m
+[32m+[m[32m  @@index([requestId])[m
+[32m+[m[32m  @@index([providerId])[m
+[32m+[m[32m  @@index([status])[m
+[32m+[m[32m}[m
+[1mdiff --git a/apps/api/start/routes.ts b/apps/api/start/routes.ts[m
+[1mindex d0922046..ed80f86e 100644[m
+[1m--- a/apps/api/start/routes.ts[m
+[1m+++ b/apps/api/start/routes.ts[m
+[36m@@ -4,6 +4,8 @@[m [mimport CategoriesController from '#controllers/categories_controller'[m
+ import UsersController from '#controllers/users_controller'[m
+ import AuthController from '#controllers/auth_controller'[m
+ import RequestsController from '#controllers/requests_controller'[m
+[32m+[m[32mimport ProvidersController from '#controllers/providers_controller'[m
+[32m+[m[32mimport ProposalsController from '#controllers/proposals_controller'[m
+ [m
+ import { ok } from '#services/http_response'[m
+ import { middleware } from '#start/kernel'[m
+[36m@@ -27,7 +29,17 @@[m [mrouter.post('/auth/login', [AuthController, 'login'])[m
+ router.post('/auth/logout', [AuthController, 'logout']).use(middleware.auth())[m
+ router.get('/auth/me', [AuthController, 'me']).use(middleware.auth())[m
+ [m
+[31m-// Requests (Pedidos)[m
+[32m+[m[32m// Requests[m
+ router.post('/requests', [RequestsController, 'store']).use(middleware.auth())[m
+ router.get('/requests/my', [RequestsController, 'my']).use(middleware.auth())[m
+ router.get('/requests/:id', [RequestsController, 'show']).use(middleware.auth())[m
+[32m+[m[32mrouter.patch('/requests/:id/status', [RequestsController, 'updateStatus']).use(middleware.auth())[m
+[32m+[m
+[32m+[m[32m// ✅ Providers[m
+[32m+[m[32mrouter.post('/providers', [ProvidersController, 'store']).use(middleware.auth())[m
+[32m+[m[32mrouter.get('/providers/me', [ProvidersController, 'me']).use(middleware.auth())[m
+[32m+[m
+[32m+[m[32m// ✅ Proposals[m
+[32m+[m[32mrouter.post('/requests/:id/proposals', [ProposalsController, 'store']).use(middleware.auth())[m
+[32m+[m[32mrouter.get('/requests/:id/proposals', [ProposalsController, 'indexByRequest']).use(middleware.auth())[m
+[32m+[m[32mrouter.patch('/proposals/:id/status', [ProposalsController, 'updateStatus']).use(middleware.auth())[m

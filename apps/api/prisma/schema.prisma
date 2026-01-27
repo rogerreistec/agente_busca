@@ -13,9 +13,11 @@ model User {
   email        String      @unique
   passwordHash String
 
-  // Relacionamentos
   tokens       UserToken[]
-  requests     Request[]   // ✅ pedidos do usuário (cliente)
+  requests     Request[]
+
+  // ✅ novo: 1 usuário pode (ou não) ser prestador
+  provider     Provider?
 
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
@@ -26,7 +28,7 @@ model UserToken {
   userId    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  type      String    @default("auth") // "auth", "password_reset", etc
+  type      String    @default("auth")
   hash      String    @unique
   expiresAt DateTime?
 
@@ -42,8 +44,7 @@ model Category {
   name      String    @unique
   slug      String    @unique
 
-  // Relacionamentos
-  requests  Request[] // ✅ pedidos desta categoria
+  requests  Request[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -64,11 +65,9 @@ enum RequestStatus {
 model Request {
   id          String        @id @default(cuid())
 
-  // Dono do pedido (cliente)
   userId      String
   user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  // Categoria (OLX-style)
   categoryId  String
   category    Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
@@ -77,10 +76,72 @@ model Request {
 
   status      RequestStatus @default(requested)
 
+  // ✅ novo: um pedido pode ter várias propostas
+  proposals   Proposal[]
+
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
   @@index([userId])
   @@index([categoryId])
+  @@index([status])
+}
+
+//
+// ============================
+// ✅ NOVO: Prestadores
+// ============================
+//
+
+model Provider {
+  id          String    @id @default(cuid())
+
+  // 1 provider por usuário (trava forte)
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // dados básicos do prestador (MVP)
+  description String?
+  rating      Float     @default(5)
+  isActive    Boolean   @default(true)
+
+  // um prestador pode enviar várias propostas
+  proposals   Proposal[]
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([isActive])
+}
+
+enum ProposalStatus {
+  sent
+  accepted
+  rejected
+  canceled
+}
+
+model Proposal {
+  id         String         @id @default(cuid())
+
+  requestId  String
+  request    Request        @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  providerId String
+  provider   Provider       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  // preço e mensagem
+  price      Decimal?       @db.Decimal(10, 2)
+  message    String
+  status     ProposalStatus @default(sent)
+
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  // ✅ trava: mesmo prestador não manda 2 propostas pro mesmo pedido
+  @@unique([requestId, providerId])
+
+  @@index([requestId])
+  @@index([providerId])
   @@index([status])
 }
